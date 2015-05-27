@@ -1,7 +1,7 @@
 /**
  * jngDragDrop
  *
- * @version 1.0
+ * @version 1.1
  * @license https://raw.githubusercontent.com/JonathanGuo/jngDragDop/master/LICENSE MIT
  * 
  *
@@ -10,6 +10,7 @@
  * <div jng-draggable></div>
  *
  */
+
 (function(window, angular, undefined) {
 	'use strict';
 
@@ -62,6 +63,8 @@
 			scope: {
 				jngDraggableTarget: '=',
 				jngDraggableCollection: '=',
+				jngOnDragStart: '&',
+				jngDisabled: '&'
 			},
 			link: function(scope, element, attrs) {
 
@@ -79,7 +82,22 @@
 				//check if native drop and drag API is supported by browser
 				if( _draggable ) {
 					//enable HTML5 native draggable feature
-					element.attr('draggable',true);
+					element.attr('draggable', true);
+				}
+
+				//watch disabled
+				if( scope.jngDisabled ) {
+					scope.$watch(scope.jngDisabled, function(isDisabled) {
+						if( isDisabled ) {
+							element.removeAttr('draggable');
+							element.attr('disabled', true);
+							element.addClass('disabled');
+						} else {
+							element.attr('draggable', true);
+							element.removeAttr('disabled');
+							element.removeClass('disabled');
+						}
+					});
 				}
 
 				/**
@@ -116,7 +134,7 @@
 					});
 
 					//invoke callback
-					invokeCallbackFunction(attrs.jngOnDragStart, event, currentData);
+					invokeCallbackFunction(scope.jngOnDragStart, event, currentData);
 
 					if( event.stopPropagation ) {
 						event.stopPropagation();
@@ -164,7 +182,7 @@
 				 * @return {function}
 				 */
 				function invokeCallbackFunction(func, event, data) {
-					return $parse(func)(scope, {event: event, data: data || undefined});
+					return $parse(func)({event: event, data: data || undefined});
 				}
 
 				/**
@@ -206,8 +224,25 @@
 			scope: {
 				jngDropSourceCollection: '=',
 				jngDropTarget: '=',
+				onJngDropped: '&',
+				jngDisabled: '&'
 			},
 			link: function(scope, element, attrs) {
+
+				//watch disabled
+				if( scope.jngDisabled ) {
+					scope.$watch(scope.jngDisabled, function(isDisabled) {
+						if( isDisabled ) {
+							element.removeAttr('draggable');
+							element.attr('disabled', true);
+							element.addClass('disabled');
+						} else {
+							element.attr('draggable', true);
+							element.removeAttr('disabled');
+							element.removeClass('disabled');
+						}
+					});
+				}
 
 				/**
 				 * Listen on dragover event
@@ -335,7 +370,8 @@
 							dropped = true;
 
 							//invokes callback
-							invokeCallbackFunction(attrs.onJngDropped, event, data, index);
+							// invokeCallbackFunction(attrs.onJngDropped, event, data, index);
+							invokeCallbackFunction(scope.onJngDropped, event, data, index);
 						}
 					} catch (e) {
 						//do whatever u want with the error.
@@ -358,38 +394,21 @@
 					//set default result to false
 					var result = false;
 
+					//check if element is disabled
+					if( attrs.jngDisabled ) {
+						if( scope.jngDisabled ) return false;
+					}
+
 					//check dragging flag
 					if( !dragging ) return false;
 
 					//check currentData
-					// if( currentData === null || currentData === undefined ) {
-					if( currentData === undefined ) {
-						return false;
-					}
+					if( currentData === undefined ) return false;
 
 					//check group
-					if( attrs.jngGroup !== null && attrs.jngGroup !== undefined && group !== attrs.jngGroup ) {
-						return false;
-					}
+					if( attrs.jngGroup !== null && attrs.jngGroup !== undefined && group !== attrs.jngGroup ) return false;
 
 					result = angular.equals(data, currentData);
-
-					// if(data !== currentData) {
-					// 	result = false;
-					// } else {
-					// 	if( angular.isArray(scope.jngDropSourceCollection) ) {
-					// 		console.log('is array');
-					// 		for( var i in scope.jngDropSourceCollection ) {
-					// 			result = eqOrInCollection(data, scope.jngDropSourceCollection[i]);
-					// 			if( result === true ) {
-					// 				break;
-					// 			}
-					// 		}
-					// 	} else {
-					// 		console.log('not array');
-					// 		result = data === scope.jngDropSourceCollection;
-					// 	}
-					// }
 
 					return result;
 				}
@@ -414,7 +433,7 @@
 				 * @return {function}
 				 */
 				function invokeCallbackFunction(func, event, data, index) {
-					return $parse(func)(scope, {event: event, data: data || undefined, index: index || undefined});
+					return $parse(func)({event: event, data: data || undefined, index: index});
 				}
 
 				/**
